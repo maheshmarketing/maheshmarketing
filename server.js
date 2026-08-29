@@ -10,6 +10,13 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/icon-192.png', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'icon-192.png'));
+});
+
+app.get('/icon-512.png', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'icon-512.png'));
+});
 app.get('/manifest.json', (req, res) => {
   res.json({
     name: "Mahesh Diaries",
