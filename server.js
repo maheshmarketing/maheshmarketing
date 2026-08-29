@@ -10,6 +10,10 @@ const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
+app.get('/manifest.json', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+});
+
 
 const seedProducts = [
   { id:'p1', name:'Premium Executive Diary 2026', category:'Diaries', price:499, image:'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80', description:'Hardbound A5 diary with dated pages and ribbon marker.', featured:true },
