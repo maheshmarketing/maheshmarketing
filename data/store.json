@@ -1,0 +1,77 @@
+{
+  "products": [
+    {
+      "id": "p1",
+      "name": "Premium Executive Diary 2026",
+      "category": "Diaries",
+      "price": 499,
+      "image": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
+      "description": "Hardbound A5 diary with dated pages and ribbon marker.",
+      "featured": true
+    },
+    {
+      "id": "p2",
+      "name": "Classic Corporate Diary",
+      "category": "Diaries",
+      "price": 349,
+      "image": "https://images.unsplash.com/photo-1456324504439-367cee3b3c32?auto=format&fit=crop&w=900&q=80",
+      "description": "Smart daily planner, ideal for employee or client gifting.",
+      "featured": true
+    },
+    {
+      "id": "p3",
+      "name": "Custom Logo Notebook",
+      "category": "Paper Products",
+      "price": 129,
+      "image": "https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=900&q=80",
+      "description": "Spiral notebook with your business logo on the cover.",
+      "featured": true
+    },
+    {
+      "id": "p4",
+      "name": "Premium Writing Pad",
+      "category": "Paper Products",
+      "price": 159,
+      "image": "https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=900&q=80",
+      "description": "Smooth premium sheets for meetings and daily notes.",
+      "featured": false
+    },
+    {
+      "id": "p5",
+      "name": "Eco Stationery Gift Box",
+      "category": "Corporate Gifting",
+      "price": 270,
+      "image": "C:\\Users\\khush\\Downloads",
+      "description": "Notebook, pen, pouch and desk essentials in gift-ready packaging.",
+      "featured": true
+    },
+    {
+      "id": "p6",
+      "name": "Branded Pen & Diary Set",
+      "category": "Corporate Gifting",
+      "price": 649,
+      "image": "https://images.unsplash.com/photo-1583485088034-697b5bc54ccd?auto=format&fit=crop&w=900&q=80",
+      "description": "A polished gifting set, customisable with your company logo.",
+      "featured": true
+    },
+    {
+      "id": "p7",
+      "name": "Desk Calendar",
+      "category": "Corporate Gifting",
+      "price": 199,
+      "image": "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=900&q=80",
+      "description": "Custom desk calendar for brand visibility all year.",
+      "featured": false
+    },
+    {
+      "id": "p8",
+      "name": "A4 Copier Paper (500 sheets)",
+      "category": "Paper Products",
+      "price": 310,
+      "image": "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80",
+      "description": "Everyday 75 GSM A4 office paper.",
+      "featured": false
+    }
+  ],
+  "orders": []
+}
