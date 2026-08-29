@@ -11,7 +11,24 @@ const DATA_FILE = path.join(DATA_DIR, 'store.json');
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/manifest.json', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'manifest.json'));
+  res.json({
+    name: "Mahesh Diaries",
+    short_name: "Mahesh Diaries",
+    description: "Premium diaries, paper products and corporate gifts from Mahesh Marketing.",
+    start_url: "/",
+    scope: "/",
+    display: "standalone",
+    orientation: "any",
+    background_color: "#ffffff",
+    theme_color: "#00104c",
+    icons: [
+      {
+        src: "/favicon.ico",
+        sizes: "any",
+        type: "image/x-icon"
+      }
+    ]
+  });
 });
 
 
