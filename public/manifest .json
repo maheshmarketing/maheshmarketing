@@ -11,15 +11,16 @@
   "theme_color": "#ffffff",
   "icons": [
   {
-    "src": "/WhatsApp Image 2026-08-29 at 2.41.27 PM (1).png",
+    "src": "/icon-192.png",
     "sizes": "192x192",
     "type": "image/png"
   },
   {
-    "src": "/WhatsApp Image 2026-08-29 at 2.41.27 PM.png",
+    "src": "/icon-512.png",
     "sizes": "512x512",
     "type": "image/png"
   }
+]
 ]
   "id": "mahesh-diaries",
   "lang": "en"
