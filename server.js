@@ -25,7 +25,7 @@ app.post('/api/payment/order', async (req, res) => {
       receipt: `MM_${Date.now()}`
     });
 
-    res.json(order);
+    res.json({ ...order, key_id: process.env.RAZORPAY_KEY_ID });
   } catch (err) {
     console.error('Razorpay order error:', err);
     res.status(500).json({ error: 'Unable to create payment order' });
