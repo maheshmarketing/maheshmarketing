@@ -10,5 +10,110 @@ function renderCart(){const lines=cart.map(line=>({...line,p:products.find(p=>p.
 function change(id,n){const line=cart.find(x=>x.productId===id);line.quantity+=n;if(line.quantity<1)cart=cart.filter(x=>x.productId!==id);save()}window.change=change;
 const openCart=()=>{$('#cart').classList.add('open');$('#overlay').classList.add('open')};const closeCart=()=>{$('#cart').classList.remove('open');$('#overlay').classList.remove('open')};$('.cart-toggle').onclick=e=>{e.preventDefault();openCart()};$('#close-cart').onclick=closeCart;$('#overlay').onclick=closeCart;
 $('#checkout-button').onclick=()=>{if(!cart.length)return;closeCart();$('#checkout-dialog').showModal()};$('.dialog-close').onclick=()=>$('#checkout-dialog').close();
-$('#order-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target), button=e.target.querySelector('button');button.disabled=true;button.textContent='Sending…';try{const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customer:{name:f.get('name'),phone:f.get('phone'),email:f.get('email'),address:f.get('address')},notes:f.get('notes'),items:cart})});const data=await r.json();if(!r.ok)throw Error(data.error);$('#form-message').textContent=`Thank you! Your order reference is ${data.order.id}. We will contact you shortly.`;cart=[];save();e.target.reset();}catch(err){$('#form-message').textContent=err.message}finally{button.disabled=false;button.textContent='Send order request'}};
+$("#order-form").onsubmit = async e => {
+  e.preventDefault();
+
+  if (!cart.length) return;
+
+  const button = e.target.querySelector("button");
+  button.disabled = true;
+  button.textContent = "Opening payment...";
+
+  try {
+    const total = cart.reduce((sum, x) => {
+      const p = products.find(p => p.id === x.productId);
+      return sum + p.price * x.quantity;
+    }, 0);
+
+    // Create Razorpay order
+    const orderRes = await fetch("/api/payment/order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: total })
+    });
+
+    const order = await orderRes.json();
+
+    if (!orderRes.ok) {
+      throw new Error(order.error || "Unable to create payment order");
+    }
+
+    const form = new FormData(e.target);
+
+    const options = {
+      key: order.key_id || order.key,
+      amount: order.amount,
+      currency: order.currency || "INR",
+      name: "Mahesh Marketing",
+      description: "Mahesh Marketing Order",
+      order_id: order.id,
+
+      prefill: {
+        name: form.get("name"),
+        contact: form.get("phone"),
+        email: form.get("email") || ""
+      },
+
+      theme: {
+        color: "#111111"
+      },
+
+      handler: async function (response) {
+        button.textContent = "Confirming order...";
+
+        const r = await fetch("/api/orders", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            customer: {
+              name: form.get("name"),
+              phone: form.get("phone"),
+              email: form.get("email"),
+              address: form.get("address"),
+              notes: form.get("notes")
+            },
+            items: cart,
+
+            payment: {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            }
+          })
+        });
+
+        const data = await r.json();
+
+        if (!r.ok) {
+          throw new Error(data.error || "Order could not be saved");
+        }
+
+        $("#form-message").textContent =
+          `Payment successful! Your order reference is ${data.orderId || data.id || ""}.`;
+
+        cart = [];
+        save();
+        renderCart();
+        e.target.reset();
+      },
+
+      modal: {
+        ondismiss: function () {
+          button.disabled = false;
+          button.textContent = "Send order request";
+        }
+      }
+    };
+
+    const razorpay = new Razorpay(options);
+    razorpay.open();
+
+  } catch (err) {
+    $("#form-message").textContent = err.message;
+    button.disabled = false;
+    button.textContent = "Send order request";
+  }
+};
 $('#year').textContent=new Date().getFullYear();load().catch(()=>$('#products-grid').innerHTML='<p>Unable to load products. Please refresh the page.</p>');
