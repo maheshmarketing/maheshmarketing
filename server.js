@@ -31,6 +31,50 @@ app.post('/api/payment/order', async (req, res) => {
     res.status(500).json({ error: 'Unable to create payment order' });
   }
 });
+app.post('/api/payment/verify', (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing payment details'
+      });
+    }
+
+    const body = razorpay_order_id + '|' + razorpay_payment_id;
+
+    const expectedSignature = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(body)
+      .digest('hex');
+
+    if (expectedSignature !== razorpay_signature) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payment signature verification failed'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'Payment verified successfully',
+      payment_id: razorpay_payment_id,
+      order_id: razorpay_order_id
+    });
+
+  } catch (err) {
+    console.error('Payment verification error:', err);
+    return res.status(500).json({
+      success: false,
+      error: 'Unable to verify payment'
+    });
+  }
+});
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
