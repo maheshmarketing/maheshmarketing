@@ -75,7 +75,13 @@ app.post('/api/orders', (req,res) => {
   const order={ id:`MM-${Date.now().toString(36).toUpperCase()}`, createdAt:new Date().toISOString(), customer:{name:customer.name.trim(),phone:customer.phone.trim(),email:(customer.email||'').trim(),address:(customer.address||'').trim()}, items:cleanItems, notes:(notes||'').trim(), total, status:'New' };
   db.orders.unshift(order); writeStore(db); res.status(201).json({order});
 });
-app.post('/api/admin/login', adminOnly, (req,res)=>res.json({ok:true}));
+app.post('/api/admin/login', (req,res)=>{
+  const token = req.body?.token;
+  if (!token || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({error:'Incorrect password'});
+  }
+  res.json({ok:true});
+});
 app.get('/api/admin/orders', adminOnly, (req,res)=>res.json(readStore().orders));
 app.patch('/api/admin/orders/:id', adminOnly, (req,res)=>{ const db=readStore(); const order=db.orders.find(o=>o.id===req.params.id); const statuses=['New','Confirmed','Processing','Dispatched','Completed','Cancelled']; if(!order) return res.status(404).json({error:'Order not found.'}); if(!statuses.includes(req.body.status)) return res.status(400).json({error:'Invalid status.'}); order.status=req.body.status; writeStore(db); res.json(order); });
 app.post('/api/admin/products', adminOnly, (req,res)=>{ if(!validProduct(req.body)) return res.status(400).json({error:'Name, category and valid price are required.'}); const db=readStore(); const product={id:crypto.randomUUID(),name:req.body.name.trim(),category:req.body.category.trim(),price:Number(req.body.price),image:req.body.image||'',description:req.body.description||'',featured:!!req.body.featured}; db.products.push(product); writeStore(db); res.status(201).json(product); });
