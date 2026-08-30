@@ -3,14 +3,18 @@
   "version": "1.0.0",
   "description": "Storefront and order manager for Mahesh Marketing",
   "main": "server.js",
-  "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
   "dependencies": {
-  "dotenv": "...",
-  "express": "...",
-  "razorpay": "...",
-  "@supabase/supabase-js": "...",
-  "multer": "^2.0.2",
-  "xlsx": "^0.18.5",
-},
-  "engines": { "node": ">=18" }
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "razorpay": "^2.9.6",
+    "@supabase/supabase-js": "^2.57.4",
+    "xlsx": "^0.18.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
