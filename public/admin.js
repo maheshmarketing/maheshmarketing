@@ -8,7 +8,28 @@ window.editProduct=id=>{const p=products.find(p=>p.id===id),form=$('#product-for
 window.removeProduct=async id=>{if(!confirm('Remove this product from your live catalogue?'))return;try{await api('/api/admin/products/'+id,{method:'DELETE'});load()}catch(e){alert(e.message)}};
 window.updateOrder=async(id,status)=>{try{await api('/api/admin/orders/'+id,{method:'PATCH',body:JSON.stringify({status})})}catch(e){alert(e.message);load()}};
 $('#login-form').onsubmit=e=>{e.preventDefault();token=$('#token').value;sessionStorage.setItem('mm-admin-token',token);login()};$('#logout').onclick=()=>{sessionStorage.removeItem('mm-admin-token');location.reload()};
-$('#product-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id'),payload=Object.fromEntries(f);payload.price=Number(payload.price);payload.featured=f.get('featured')==='on';delete payload.id;try{await api(`/api/admin/products${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(payload)});$('#product-message').textContent='Product saved.';e.target.reset();$('#form-title').textContent='Add a product';$('#cancel-edit').classList.add('hidden');load()}catch(err){$('#product-message').textContent=err.message}};$('#cancel-edit').onclick=()=>{$('#product-form').reset();$('#form-title').textContent='Add a product';$('#cancel-edit').classList.add('hidden')};if(token)login();
+$('#product-form').onsubmit = async e => {
+  e.preventDefault();
+  const f = new FormData(e.target);
+  const id = f.get('id');
+  const payload = Object.fromEntries(f);
+  payload.price = Number(payload.price);
+  payload.featured = f.get('featured') === 'on';
+  delete payload.id;
+
+  try {
+    await api(`/api/admin/products${id ? '/' + id : ''}`, {
+      method: id ? 'PUT' : 'POST',
+      body: JSON.stringify(payload)
+    });
+
+    $('#product-message').textContent = 'Product saved.';
+    $('#product-edit').classList.add('hidden');
+    load();
+  } catch (err) {
+    $('#product-message').textContent = err.message;
+  }
+};
 // ================= EXCEL PRODUCT IMPORT =================
 
 const excelInput = document.createElement("input");
