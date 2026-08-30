@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const Razorpay = require('razorpay');
 
 const app = express();
-
+app.use(express.json({ limit: '1mb' }));
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET
@@ -34,7 +34,6 @@ app.post('/api/payment/order', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
-app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/icon-192.png', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'icon-192.png'));
