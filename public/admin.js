@@ -32,100 +32,52 @@ $('#product-form').onsubmit = async e => {
 };
 // ================= EXCEL PRODUCT IMPORT =================
 
-const excelInput = document.createElement("input");
-excelInput.type = "file";
-excelInput.accept = ".xlsx,.xls,.csv";
-excelInput.style.display = "none";
-document.body.appendChild(excelInput);
+const excelFile = document.querySelector("#excel-file");
+const importExcelButton = document.querySelector("#import-excel");
+const importMessage = document.querySelector("#import-message");
 
-const excelButton = document.createElement("button");
-excelButton.type = "button";
-excelButton.textContent = "Import Products from Excel";
-excelButton.style.marginLeft = "10px";
+if (excelFile && importExcelButton) {
+  importExcelButton.addEventListener("click", async () => {
+    const file = excelFile.files[0];
 
-const productForm = document.querySelector("#product-form");
-
-if (productForm) {
-  productForm.appendChild(excelButton);
-}
-
-excelButton.addEventListener("click", () => {
-  excelInput.click();
-});
-
-excelInput.addEventListener("change", async function () {
-  const file = this.files[0];
-
-  if (!file) return;
-
-  try {
-    excelButton.disabled = true;
-    excelButton.textContent = "Importing...";
-
-    const arrayBuffer = await file.arrayBuffer();
-
-    const workbook = XLSX.read(arrayBuffer, {
-      type: "array"
-    });
-
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
-    const rows = XLSX.utils.sheet_to_json(sheet, {
-      defval: ""
-    });
-
-    if (!rows.length) {
-      throw new Error("Excel sheet is empty");
+    if (!file) {
+      importMessage.textContent = "Please select an Excel file.";
+      return;
     }
 
-    let success = 0;
-    let failed = 0;
+    try {
+      importExcelButton.disabled = true;
+      importExcelButton.textContent = "Importing...";
+      importMessage.textContent = "";
 
-    for (const row of rows) {
-      const product = {
-        id: String(row.id || "").trim(),
-        name: String(row.name || row.Name || "").trim(),
-        category: String(row.category || row.Category || "").trim(),
-        price: Number(row.price || row.Price || 0),
-        image: String(row.image || row.Image || "").trim(),
-        description: String(row.description || row.Description || "").trim(),
-        featured:
-          String(row.featured || row.Featured || "")
-            .toLowerCase() === "true"
-      };
+      const formData = new FormData();
+      formData.append("file", file);
 
-      if (!product.id || !product.name || !product.category || !product.price) {
-        failed++;
-        continue;
-      }
-
-      const response = await fetch("/api/admin/products", {
+      const response = await fetch("/api/admin/products/import", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "x-admin-token": token
         },
-        body: JSON.stringify(product)
+        body: formData
       });
 
-      if (response.ok) {
-        success++;
-      } else {
-        failed++;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Excel import failed.");
       }
+
+      importMessage.textContent = result.message;
+      excelFile.value = "";
+
+      await load();
+
+    } catch (error) {
+      console.error("Excel import error:", error);
+      importMessage.textContent = "Excel import failed: " + error.message;
+    } finally {
+      importExcelButton.disabled = false;
+      importExcelButton.textContent = "📥 Import Excel Products";
     }
-
-    alert(
-      `Import complete!\\n\\nSuccessfully added: ${success}\\nFailed: ${failed}`
-    );
-
-    location.reload();
-
-  } catch (error) {
-    console.error("Excel import error:", error);
-    alert("Excel import failed: " + error.message);
-  } finally {
-    excelButton.disabled = false;
-    excelButton.textContent = "Import Products from Excel";
-    excelInput.value = "";
-  }
-});
+  });
+}
