@@ -4,7 +4,12 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const { createClient } = require('@supabase/supabase-js');
 
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 const razorpay = new Razorpay({
@@ -123,38 +128,287 @@ const seedProducts = [
   { id:'p7', name:'Desk Calendar', category:'Corporate Gifting', price:199, image:'https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&w=900&q=80', description:'Custom desk calendar for brand visibility all year.', featured:false },
   { id:'p8', name:'A4 Copier Paper (500 sheets)', category:'Paper Products', price:310, image:'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=900&q=80', description:'Everyday 75 GSM A4 office paper.', featured:false }
 ];
+async function getProducts() {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('id');
 
-function readStore() {
-  if (!fs.existsSync(DATA_FILE)) { fs.mkdirSync(DATA_DIR, { recursive:true }); const initial={products:seedProducts,orders:[]}; fs.writeFileSync(DATA_FILE, JSON.stringify(initial,null,2)); return initial; }
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  if (error) throw error;
+  return data || [];
 }
-function writeStore(data) { fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2)); }
+
+async function getOrders() {
+  const { data, error } = await supabase
+    .from('orders')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
 function adminOnly(req, res, next) {
-  if (!process.env.ADMIN_TOKEN || req.header('x-admin-token') !== process.env.ADMIN_TOKEN) return res.status(401).json({ error:'Admin access required.' });
+  if (
+    !process.env.ADMIN_TOKEN ||
+    req.header('x-admin-token') !== process.env.ADMIN_TOKEN
+  ) {
+    return res.status(401).json({
+      error: 'Admin access required.'
+    });
+  }
   next();
 }
-function validProduct(p) { return p && p.name && p.category && Number(p.price) >= 0; }
 
-app.get('/api/products', (req,res) => res.json(readStore().products));
-app.post('/api/orders', (req,res) => {
-  const { customer, items, notes } = req.body;
-  if (!customer?.name || !customer?.phone || !Array.isArray(items) || !items.length) return res.status(400).json({error:'Name, phone number and at least one item are required.'});
-  const db=readStore(); let total=0; const cleanItems=[];
-  for (const line of items) { const product=db.products.find(p=>p.id===line.productId); const quantity=Number(line.quantity); if (!product || !Number.isInteger(quantity) || quantity<1) return res.status(400).json({error:'One or more products are invalid.'}); total += product.price*quantity; cleanItems.push({productId:product.id,name:product.name,price:product.price,quantity}); }
-  const order={ id:`MM-${Date.now().toString(36).toUpperCase()}`, createdAt:new Date().toISOString(), customer:{name:customer.name.trim(),phone:customer.phone.trim(),email:(customer.email||'').trim(),address:(customer.address||'').trim()}, items:cleanItems, notes:(notes||'').trim(), total, status:'New' };
-  db.orders.unshift(order); writeStore(db); res.status(201).json({order});
-});
-app.post('/api/admin/login', (req,res)=>{
-  const token = req.body?.token;
-  if (!token || token !== process.env.ADMIN_TOKEN) {
-    return res.status(401).json({error:'Incorrect password'});
+function validProduct(p) {
+  return (
+    p &&
+    p.name &&
+    p.category &&
+    Number(p.price) >= 0
+  );
+}
+
+// PRODUCTS
+app.get('/api/products', async (req, res) => {
+  try {
+    const products = await getProducts();
+    res.json(products);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Unable to load products' });
   }
-  res.json({ok:true});
 });
-app.get('/api/admin/orders', adminOnly, (req,res)=>res.json(readStore().orders));
-app.patch('/api/admin/orders/:id', adminOnly, (req,res)=>{ const db=readStore(); const order=db.orders.find(o=>o.id===req.params.id); const statuses=['New','Confirmed','Processing','Dispatched','Completed','Cancelled']; if(!order) return res.status(404).json({error:'Order not found.'}); if(!statuses.includes(req.body.status)) return res.status(400).json({error:'Invalid status.'}); order.status=req.body.status; writeStore(db); res.json(order); });
-app.post('/api/admin/products', adminOnly, (req,res)=>{ if(!validProduct(req.body)) return res.status(400).json({error:'Name, category and valid price are required.'}); const db=readStore(); const product={id:crypto.randomUUID(),name:req.body.name.trim(),category:req.body.category.trim(),price:Number(req.body.price),image:req.body.image||'',description:req.body.description||'',featured:!!req.body.featured}; db.products.push(product); writeStore(db); res.status(201).json(product); });
-app.put('/api/admin/products/:id', adminOnly, (req,res)=>{ if(!validProduct(req.body)) return res.status(400).json({error:'Name, category and valid price are required.'}); const db=readStore(); const n=db.products.findIndex(p=>p.id===req.params.id); if(n<0) return res.status(404).json({error:'Product not found.'}); db.products[n]={...db.products[n],...req.body,id:req.params.id,price:Number(req.body.price),featured:!!req.body.featured}; writeStore(db); res.json(db.products[n]); });
-app.delete('/api/admin/products/:id', adminOnly, (req,res)=>{ const db=readStore(); const original=db.products.length; db.products=db.products.filter(p=>p.id!==req.params.id); if(db.products.length===original) return res.status(404).json({error:'Product not found.'}); writeStore(db); res.status(204).end(); });
-app.get('*', (_,res)=>res.sendFile(path.join(__dirname,'public','index.html')));
-app.listen(PORT, ()=>console.log(`Mahesh Marketing Store is running at http://localhost:${PORT}`));
+
+// CREATE ORDER
+app.post('/api/orders', async (req, res) => {
+  try {
+    const { customer, items, notes } = req.body;
+
+    if (
+      !customer?.name ||
+      !customer?.phone ||
+      !Array.isArray(items) ||
+      !items.length
+    ) {
+      return res.status(400).json({
+        error: 'Name, phone number and at least one item are required'
+      });
+    }
+
+    const products = await getProducts();
+    let total = 0;
+    const cleanItems = [];
+
+    for (const line of items) {
+      const product = products.find(
+        p => p.id === line.productId
+      );
+
+      const quantity = Number(line.quantity);
+
+      if (
+        !product ||
+        !Number.isInteger(quantity) ||
+        quantity <= 0
+      ) {
+        return res.status(400).json({
+          error: 'Invalid product or quantity'
+        });
+      }
+
+      total += Number(product.price) * quantity;
+
+      cleanItems.push({
+        productId: product.id,
+        name: product.name,
+        price: Number(product.price),
+        quantity
+      });
+    }
+
+    const order = {
+      id: `MM-${Date.now().toString(36).toUpperCase()}`,
+      customer: {
+        name: customer.name.trim(),
+        phone: customer.phone.trim()
+      },
+      items: cleanItems,
+      notes: notes || '',
+      total,
+      status: 'New',
+      payment: null
+    };
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert(order)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error('Order error:', err);
+    res.status(500).json({
+      error: 'Unable to create order'
+    });
+  }
+});
+
+// ADMIN LOGIN
+app.post('/api/admin/login', (req, res) => {
+  const token = req.body?.token;
+
+  if (!token || token !== process.env.ADMIN_TOKEN) {
+    return res.status(401).json({
+      error: 'Incorrect password'
+    });
+  }
+
+  res.json({ ok: true });
+});
+
+// ADMIN ORDERS
+app.get('/api/admin/orders', adminOnly, async (req, res) => {
+  try {
+    res.json(await getOrders());
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Unable to load orders'
+    });
+  }
+});
+
+// UPDATE ORDER
+app.patch('/api/admin/orders/:id', adminOnly, async (req, res) => {
+  try {
+    const allowed = ['New', 'Confirmed', 'Shipped', 'Delivered', 'Cancelled'];
+    const { status } = req.body;
+
+    if (!allowed.includes(status)) {
+      return res.status(400).json({
+        error: 'Invalid status'
+      });
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Unable to update order'
+    });
+  }
+});
+
+// ADD PRODUCT
+app.post('/api/admin/products', adminOnly, async (req, res) => {
+  try {
+    if (!validProduct(req.body)) {
+      return res.status(400).json({
+        error: 'Name, category and valid price are required'
+      });
+    }
+
+    const product = {
+      id: req.body.id || `p${Date.now()}`,
+      name: req.body.name,
+      category: req.body.category,
+      price: Number(req.body.price),
+      image: req.body.image || '',
+      description: req.body.description || '',
+      featured: Boolean(req.body.featured)
+    };
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert(product)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.status(201).json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Unable to add product'
+    });
+  }
+});
+
+// UPDATE PRODUCT
+app.put('/api/admin/products/:id', adminOnly, async (req, res) => {
+  try {
+    if (!validProduct(req.body)) {
+      return res.status(400).json({
+        error: 'Name, category and valid price are required'
+      });
+    }
+
+    const update = {
+      name: req.body.name,
+      category: req.body.category,
+      price: Number(req.body.price),
+      image: req.body.image || '',
+      description: req.body.description || '',
+      featured: Boolean(req.body.featured)
+    };
+
+    const { data, error } = await supabase
+      .from('products')
+      .update(update)
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Unable to update product'
+    });
+  }
+});
+
+// DELETE PRODUCT
+app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', req.params.id);
+
+    if (error) throw error;
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: 'Unable to delete product'
+    });
+  }
+});
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.listen(PORT, () => {
+  console.log(
+    `Mahesh Marketing Store is running on http://localhost:${PORT}`
+  );
+});
