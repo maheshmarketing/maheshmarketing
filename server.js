@@ -412,6 +412,107 @@ app.delete('/api/admin/products/:id', adminOnly, async (req, res) => {
     });
   }
 });
+// IMPORT PRODUCTS FROM EXCEL
+app.post(
+  '/api/admin/products/import',
+  adminOnly,
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          error: 'Please upload an Excel file.'
+        });
+      }
+
+      const workbook = XLSX.read(req.file.buffer, {
+        type: 'buffer'
+      });
+
+      const sheetName = workbook.SheetNames[0];
+
+      if (!sheetName) {
+        return res.status(400).json({
+          error: 'Excel sheet is empty.'
+        });
+      }
+
+      const sheet = workbook.Sheets[sheetName];
+
+      const rows = XLSX.utils.sheet_to_json(sheet, {
+        defval: ''
+      });
+
+      if (!rows.length) {
+        return res.status(400).json({
+          error: 'No products found in Excel.'
+        });
+      }
+
+      const products = [];
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+
+        const id = String(row.id || '').trim();
+        const name = String(row.name || '').trim();
+        const category = String(row.category || '').trim();
+        const price = Number(row.price);
+
+        if (
+          !id ||
+          !name ||
+          !category ||
+          !Number.isFinite(price) ||
+          price < 0
+        ) {
+          return res.status(400).json({
+            error: `Invalid product data in Excel row ${i + 2}.`
+          });
+        }
+
+        const featuredValue = String(row.featured || '')
+          .trim()
+          .toLowerCase();
+
+        products.push({
+          id,
+          name,
+          category,
+          price,
+          image: String(row.image || '').trim(),
+          description: String(row.description || '').trim(),
+          featured:
+            featuredValue === 'true' ||
+            featuredValue === '1' ||
+            featuredValue === 'yes'
+        });
+      }
+
+      const { data, error } = await supabase
+        .from('products')
+        .upsert(products, {
+          onConflict: 'id'
+        })
+        .select();
+
+      if (error) throw error;
+
+      res.json({
+        success: true,
+        count: data.length,
+        message: `${data.length} products imported successfully.`
+      });
+
+    } catch (err) {
+      console.error('Excel import error:', err);
+
+      res.status(500).json({
+        error: 'Unable to import products from Excel.'
+      });
+    }
+  }
+);
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
