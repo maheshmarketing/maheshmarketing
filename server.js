@@ -3,8 +3,14 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
 
 const app = express();
+
+const razorpay = new Razorpay({
+  key_id:rzp_test_TVuM7XVM7vpTXw process.env.RAZORPAY_KEY_ID,
+  key_secret:Ke4j5vtv9Pwu44rf7dFB0Yl1  process.env.RAZORPAY_KEY_SECRET
+});
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'store.json');
