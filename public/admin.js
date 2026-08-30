@@ -9,3 +9,102 @@ window.removeProduct=async id=>{if(!confirm('Remove this product from your live 
 window.updateOrder=async(id,status)=>{try{await api('/api/admin/orders/'+id,{method:'PATCH',body:JSON.stringify({status})})}catch(e){alert(e.message);load()}};
 $('#login-form').onsubmit=e=>{e.preventDefault();token=$('#token').value;sessionStorage.setItem('mm-admin-token',token);login()};$('#logout').onclick=()=>{sessionStorage.removeItem('mm-admin-token');location.reload()};
 $('#product-form').onsubmit=async e=>{e.preventDefault();const f=new FormData(e.target),id=f.get('id'),payload=Object.fromEntries(f);payload.price=Number(payload.price);payload.featured=f.get('featured')==='on';delete payload.id;try{await api(`/api/admin/products${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(payload)});$('#product-message').textContent='Product saved.';e.target.reset();$('#form-title').textContent='Add a product';$('#cancel-edit').classList.add('hidden');load()}catch(err){$('#product-message').textContent=err.message}};$('#cancel-edit').onclick=()=>{$('#product-form').reset();$('#form-title').textContent='Add a product';$('#cancel-edit').classList.add('hidden')};if(token)login();
+// ================= EXCEL PRODUCT IMPORT =================
+
+const excelInput = document.createElement("input");
+excelInput.type = "file";
+excelInput.accept = ".xlsx,.xls,.csv";
+excelInput.style.display = "none";
+document.body.appendChild(excelInput);
+
+const excelButton = document.createElement("button");
+excelButton.type = "button";
+excelButton.textContent = "Import Products from Excel";
+excelButton.style.marginLeft = "10px";
+
+const productForm = document.querySelector("#product-form");
+
+if (productForm) {
+  productForm.appendChild(excelButton);
+}
+
+excelButton.addEventListener("click", () => {
+  excelInput.click();
+});
+
+excelInput.addEventListener("change", async function () {
+  const file = this.files[0];
+
+  if (!file) return;
+
+  try {
+    excelButton.disabled = true;
+    excelButton.textContent = "Importing...";
+
+    const arrayBuffer = await file.arrayBuffer();
+
+    const workbook = XLSX.read(arrayBuffer, {
+      type: "array"
+    });
+
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    const rows = XLSX.utils.sheet_to_json(sheet, {
+      defval: ""
+    });
+
+    if (!rows.length) {
+      throw new Error("Excel sheet is empty");
+    }
+
+    let success = 0;
+    let failed = 0;
+
+    for (const row of rows) {
+      const product = {
+        id: String(row.id || "").trim(),
+        name: String(row.name || row.Name || "").trim(),
+        category: String(row.category || row.Category || "").trim(),
+        price: Number(row.price || row.Price || 0),
+        image: String(row.image || row.Image || "").trim(),
+        description: String(row.description || row.Description || "").trim(),
+        featured:
+          String(row.featured || row.Featured || "")
+            .toLowerCase() === "true"
+      };
+
+      if (!product.id || !product.name || !product.category || !product.price) {
+        failed++;
+        continue;
+      }
+
+      const response = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(product)
+      });
+
+      if (response.ok) {
+        success++;
+      } else {
+        failed++;
+      }
+    }
+
+    alert(
+      `Import complete!\\n\\nSuccessfully added: ${success}\\nFailed: ${failed}`
+    );
+
+    location.reload();
+
+  } catch (error) {
+    console.error("Excel import error:", error);
+    alert("Excel import failed: " + error.message);
+  } finally {
+    excelButton.disabled = false;
+    excelButton.textContent = "Import Products from Excel";
+    excelInput.value = "";
+  }
+});
