@@ -4,6 +4,6 @@
   "description": "Storefront and order manager for Mahesh Marketing",
   "main": "server.js",
   "scripts": { "start": "node server.js", "dev": "node --watch server.js" },
-  "dependencies": { "dotenv": "^16.4.7", "express": "^4.21.2" },
+  "dependencies": { "dotenv": "^16.4.7", "express": "^4.21.2", "razorpay": "^2.9.6" },
   "engines": { "node": ">=18" }
 }
