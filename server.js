@@ -183,7 +183,7 @@ app.get('/api/products', async (req, res) => {
 // CREATE ORDER
 app.post('/api/orders', async (req, res) => {
   try {
-    const { customer, items, notes } = req.body;
+    const { customer, items, notes, payment } = req.body;
 
     if (
       !customer?.name ||
@@ -237,7 +237,7 @@ app.post('/api/orders', async (req, res) => {
       notes: notes || '',
       total,
       status: 'New',
-      payment: null
+      payment: payment || null
     };
 
     const { data, error } = await supabase
